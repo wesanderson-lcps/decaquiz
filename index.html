@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DECA Trivia Quiz</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for scroll snapping and font */
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent body scroll, let the quiz container handle it */
+        }
+        .quiz-container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory; /* Enable smooth scroll snapping */
+            -webkit-overflow-scrolling: touch; /* For smoother scrolling on iOS */
+        }
+        .question-slide {
+            scroll-snap-align: start; /* Snap each slide to the start of the scroll area */
+            min-height: 100vh; /* Each slide takes full viewport height */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem; /* Reduced padding */
+            box-sizing: border-box; /* Include padding in the element's total width and height */
+        }
+        /* Hide the scrollbar for a cleaner look */
+        .quiz-container::-webkit-scrollbar {
+            display: none;
+        }
+        .quiz-container {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        /* Style for highlighted correct answer - Now a very vibrant green */
+        .correct-answer-highlight {
+            background-color: #00ff00; /* Bright, almost neon green */
+            border: 4px solid #008000; /* Darker green border, thicker */
+            font-weight: 900; /* Extra bold font */
+            color: #004d00; /* Even darker green text */
+            box-shadow: 0 6px 15px rgba(0, 255, 0, 0.6); /* More pronounced shadow */
+            transform: scale(1.03); /* Slightly more enlargement on highlight */
+            transition: all 0.2s ease-out; /* Smooth transition */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Fullscreen Button -->
+    <div class="fixed top-4 right-4 z-50">
+        <button id="fullscreen-button" class="px-4 py-2 bg-gray-700 text-white rounded-full shadow-lg hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-500 focus:ring-opacity-50 transition-colors duration-200">
+            Fullscreen
+        </button>
+    </div>
+
+    <div id="quiz-container" class="quiz-container">
+        <!-- Questions will be dynamically loaded here -->
+    </div>
+
+    <script>
+        // Array of DECA trivia questions and their options, now including the correct answer index
+        const questions = [
+            {
+                question: "What is the official logo of DECA?",
+                options: ["Diamond", "Oval", "Square", "Triangle"],
+                correctAnswerIndex: 0 // Diamond
+            },
+            {
+                question: "How long has Riverside DECA been active?",
+                options: ["11 years (since school opening)", "10 years", "8 years", "7 years"],
+                correctAnswerIndex: 0 // 11 years (since school opening)
+            },
+            {
+                question: "What does DLC stand for?",
+                options: ["District Leadership Conference", "Distributing Leadership Conference", "DECA Leadership Conference", "Decision Leading Conference"],
+                correctAnswerIndex: 0 // District Leadership Conference
+            },
+            {
+                question: "What does ICDC stand for?",
+                options: ["International Career Development Conference", "International Communication Development Conference", "International Cyber Distribution Conference", "International Creativity Decision Conference"],
+                correctAnswerIndex: 0 // International Career Development Conference
+            },
+            {
+                question: "How many chapter members did RVHS DECA have last year?",
+                options: ["200-250", "250-300", "300-350", "350+"],
+                correctAnswerIndex: 3 // 350+
+            },
+            {
+                question: "When is your section of the Annual Report due to the advisors?",
+                options: ["December 19", "January 9", "January 13", "January 20"],
+                correctAnswerIndex: 2 // January 13
+            },
+            {
+                question: "What does SLC stand for?",
+                options: ["State Leadership Conference", "Southern Loudoun Conference", "Serving Leaders Competition", "Social Leprechaun Competition"],
+                correctAnswerIndex: 0 // State Leadership Conference
+            },
+            {
+                question: "What month does the annual PINK OUT game happen in?",
+                options: ["Late August", "September", "October", "The month doesn't really matter"],
+                correctAnswerIndex: 2 // October
+            },
+            {
+                question: "What organization does the GOLD OUT game donate to?",
+                options: ["Childhood cancer prevention organization", "Hope faster", "Childhood cancer awareness", "Team Matias"],
+                correctAnswerIndex: 3 // Team Matias
+            },
+            {
+                question: "What grade can RVHS DECA members begin working at the Ram Shack?",
+                options: ["Senior year", "Junior year", "Sophomore year", "Only staff"],
+                correctAnswerIndex: 1 // Junior year
+            },
+            {
+                question: "Who is the newest RVHS DECA Advisor?",
+                options: ["Mrs. Daley", "Mrs. Winans", "Mr. Fenner", "Mr. Douglas"],
+                correctAnswerIndex: 1 // Mrs. Winans
+            },
+            {
+                question: "What is the RVHS DECA Instagram account username?",
+                options: ["@rvhs.deca", "@deca_rvhs", "@riversidedeca", "@riverside_deca"],
+                correctAnswerIndex: 0 // @rvhs.deca
+            },
+            {
+                question: "Where is SLC held this year?",
+                options: ["Richmond", "Washington DC", "VA Beach", "Manassas"],
+                correctAnswerIndex: 2 // VA Beach
+            },
+            {
+                question: "Where is ICDC held this year?",
+                options: ["California", "Atlanta", "Nashville", "Orlando"],
+                correctAnswerIndex: 1 // Atlanta
+            },
+            {
+                question: "What does DECA stand for?",
+                options: ["Distributive Education Clubs of America", "Darn Expensive Co-curricular Association", "Divas Expect Class Acts", "Nothing"],
+                correctAnswerIndex: 3 // Nothing
+            }
+        ];
+
+        const quizContainer = document.getElementById('quiz-container');
+        const optionLabels = ['A', 'B', 'C', 'D']; // Define globally for reuse
+
+        // Function to render all questions into the DOM
+        function renderQuestions() {
+            questions.forEach((q, index) => {
+                const slide = document.createElement('section');
+                // Removed `my-8` from slide class to reduce vertical margin between slides
+                slide.id = `question-${index}`;
+                slide.className = 'question-slide bg-white shadow-lg rounded-xl mx-auto max-w-4xl flex flex-col justify-between items-center text-center p-6'; // Reduced padding to p-6
+
+                const questionText = document.createElement('h2');
+                questionText.className = 'text-3xl md:text-4xl font-bold mb-6 text-indigo-700'; // Reduced mb-8 to mb-6
+                questionText.textContent = q.question;
+                slide.appendChild(questionText);
+
+                const optionsList = document.createElement('div');
+                optionsList.className = 'grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-xl mb-6'; // Reduced gap and mb-8 to mb-6
+
+                // Store references to option divs to highlight later
+                const optionDivs = [];
+                q.options.forEach((option, i) => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'bg-indigo-100 text-indigo-800 p-4 rounded-lg text-lg font-medium shadow-sm';
+                    optionDiv.textContent = `${optionLabels[i]}. ${option}`;
+                    optionDivs.push(optionDiv); // Store the div reference
+                    optionsList.appendChild(optionDiv);
+                });
+                slide.appendChild(optionsList);
+
+                // Add "Show Answer" button
+                const showAnswerButton = document.createElement('button');
+                showAnswerButton.id = `show-answer-button-${index}`;
+                showAnswerButton.className = 'mt-4 px-6 py-3 bg-purple-600 text-white font-semibold text-lg rounded-full shadow-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50 transition-all duration-300 transform hover:scale-105';
+                showAnswerButton.textContent = 'Show Answer';
+                showAnswerButton.onclick = () => {
+                    // Highlight the correct answer
+                    optionDivs[q.correctAnswerIndex].classList.add('correct-answer-highlight');
+                    // Hide the "Show Answer" button
+                    showAnswerButton.classList.add('hidden');
+                };
+                slide.appendChild(showAnswerButton);
+
+                // Add "Next Question" button only if it's not the last question
+                if (index < questions.length - 1) {
+                    const nextButton = document.createElement('button');
+                    nextButton.id = `next-button-${index}`;
+                    nextButton.className = 'mt-8 px-8 py-4 bg-indigo-600 text-white font-semibold text-xl rounded-full shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-300 transform hover:scale-105';
+                    nextButton.textContent = 'Next Question';
+                    nextButton.onclick = () => goToSlide(`question-${index + 1}`);
+                    slide.appendChild(nextButton);
+                } else {
+                    const endMessage = document.createElement('p');
+                    endMessage.className = 'mt-8 text-2xl font-semibold text-gray-600';
+                    endMessage.textContent = "You've reached the end of the quiz!";
+                    slide.appendChild(endMessage);
+                }
+
+                quizContainer.appendChild(slide);
+            });
+        }
+
+        // Generic function to scroll to a specific slide ID
+        function goToSlide(slideId) {
+            const targetElement = document.getElementById(slideId);
+            if (targetElement) {
+                targetElement.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Fullscreen functionality
+        const fullscreenButton = document.getElementById('fullscreen-button');
+        fullscreenButton.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                quizContainer.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable fullscreen: ${err.message} (${err.name})`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // Initialize the quiz when the window loads
+        window.onload = renderQuestions;
+    </script>
+</body>
+</html>
